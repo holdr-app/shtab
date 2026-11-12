@@ -1,6 +1,7 @@
 import { register } from './registry.js';
 import * as db from './db.js';
 import { esc, pad, dayKey } from './lib.js';
+import { shell, toast, ask, removeWithUndo, ICON } from './ui.js';
 
 const st = { tab: 'daily', allHist: false };
 let host, timer;
@@ -9,7 +10,6 @@ const KINDS = [['Курение', 'курения'], ['Алкоголь', 'ал�
 const GOALS = [7, 14, 30, 90];
 const TRIG = ['Стресс', 'Компания', 'Скука', 'Усталость', 'Другое'];
 
-function toast(t) { const x = document.createElement('div'); x.className = 'toast'; x.textContent = t; document.body.append(x); setTimeout(() => x.remove(), 2200); }
 const addDays = (k, n) => { const [y, m, d] = k.split('-').map(Number); return dayKey(new Date(y, m - 1, d + n).getTime()); };
 function streak(done, today) {
   let k = done.has(today) ? today : addDays(today, -1), n = 0;
@@ -30,11 +30,12 @@ async function daily() {
   const week = Array.from({ length: 7 }, (_, i) => addDays(today, i - 6));
   const rows = hs.map(h => {
     const s = byH[h.id] || new Set(), on = s.has(today), n = streak(s, today);
-    return `<div class="hrow"><button class="chk" data-act="tog" data-id="${esc(h.id)}" aria-pressed="${on}" aria-label="${esc(h.name)}: ${on ? 'выполнено' : 'не выполнено'}">${on ? '✓' : ''}</button>
-      <div class="hn"><b>${esc(h.name)}</b><div class="dots">${week.map(k => `<i class="${s.has(k) ? 'on' : ''}"></i>`).join('')}</div></div>
-      <span class="stk">${n ? n + ' дн' : '—'}</span><button class="more" data-act="hmenu" data-id="${esc(h.id)}" aria-label="Изменить или удалить привычку «${esc(h.name)}»">⋯</button></div>`;
-  }).join('') || '<div class="mut">Привычек пока нет. Нажми «+», чтобы добавить.</div>';
-  return `<div class="mut">Сегодня выполнено ${doneN} из ${hs.length}</div><div class="card hl">${rows}</div><button class="fab" data-act="addh" aria-label="Добавить привычку">+</button>`;
+    return `<div class="hrow"><button class="htog" data-act="tog" data-id="${esc(h.id)}" aria-pressed="${on}" aria-label="${esc(h.name)}: ${on ? 'выполнено, нажми чтобы снять' : 'не выполнено'}"><span class="chk" aria-hidden="true">${on ? ICON.check : ''}</span>
+      <span class="hn"><b>${esc(h.name)}</b><span class="dots">${week.map(k => `<i class="${s.has(k) ? 'on' : ''}"></i>`).join('')}</span></span>
+      <span class="stk">${n >= 2 ? n + ' дн подряд' : ''}</span></button><button class="more" data-act="hmenu" data-id="${esc(h.id)}" aria-label="Изменить или удалить «${esc(h.name)}»">${ICON.more}</button></div>`;
+  }).join('');
+  if (!hs.length) return `<div class="empty"><b>Привычек пока нет</b><p>Добавь то, что хочешь делать каждый день: зарядку, чтение, воду.</p><button class="save" data-act="addh">Добавить привычку</button></div>`;
+  return `<div class="mut">Сегодня ${doneN} из ${hs.length}${doneN === hs.length ? ' — всё сделано' : ''}. Нажми на привычку, чтобы отметить.</div><div class="card hl">${rows}</div><button class="fab" data-act="addh" aria-label="Добавить привычку">${ICON.plus}</button>`;
 }
 
 // ---------- «Без…»
@@ -42,13 +43,13 @@ async function quits() {
   const qs = (await db.all('quits')).sort((a, b) => a.start - b.start);
   const cards = qs.map(q => {
     const e = elapsed(q.start), pct = Math.min(100, Math.round(e.days / q.goal * 100));
-    return `<div class="card qc" data-id="${esc(q.id)}"><div class="qh"><div><b>Без ${esc(q.name)}</b><small>цель: ${q.goal} дн</small></div><div class="qa"><button class="more" data-act="qmenu" data-id="${esc(q.id)}" aria-label="Изменить или удалить серию">⋯</button><button class="relapse" data-act="relapse" data-id="${esc(q.id)}">Срыв</button></div></div>
+    return `<div class="card qc" data-id="${esc(q.id)}"><div class="qh"><div><b>Без ${esc(q.name)}</b><small>цель: ${q.goal} дн</small></div><div class="qa"><button class="more" data-act="qmenu" data-id="${esc(q.id)}" aria-label="Изменить или удалить серию">${ICON.more}</button><button class="relapse" data-act="relapse" data-id="${esc(q.id)}">Срыв</button></div></div>
       <div class="big"><span class="qd">${e.d}</span><small>дн</small><span class="qh2">${pad(e.h)}</span><small>ч</small></div>
       <div class="bar"><i style="width:${pct}%;background:var(--acc)"></i></div><div class="qf"><span>до цели ${q.goal} дн</span><span>${pct}%</span></div></div>`;
-  }).join('') || '<div class="card mut">Серий пока нет. Нажми «+», чтобы начать отсчёт.</div>';
+  }).join('') || `<div class="empty"><b>Серий пока нет</b><p>Выбери, от чего отказываешься, и таймер начнёт считать дни и часы.</p><button class="save" data-act="addq">Начать серию</button></div>`;
   const all = (await db.all('quitHistory')).sort((a, b) => b.end - a.end), hist = st.allHist ? all : all.slice(0, 5);
   const hh = all.length ? `<div class="lab" style="margin-top:6px">Прошлые серии <span class="mut">нажми, чтобы изменить или удалить</span></div><div class="card list">${hist.map(h => `<button class="item" data-act="hist" data-id="${esc(h.id)}"><div><b>Без ${esc(h.name)}</b><small>${new Date(h.end).toLocaleDateString('ru-RU')}${h.trigger ? ' · ' + esc(h.trigger) : ''}${h.comment ? ' · ' + esc(h.comment) : ''}</small></div><span>${elapsed(h.start, h.end).d} дн</span></button>`).join('')}</div>${all.length > 5 ? `<button class="btn" data-act="allhist">${st.allHist ? 'Свернуть' : 'Показать все ' + all.length}</button>` : ''}` : '';
-  return cards + hh + '<button class="fab" data-act="addq" aria-label="Новая серия">+</button>';
+  return cards + hh + (qs.length ? `<button class="fab" data-act="addq" aria-label="Новая серия">${ICON.plus}</button>` : '');
 }
 // живой таймер: раз в минуту обновляем цифры без перерисовки
 function tick() {
@@ -64,12 +65,6 @@ function tick() {
 }
 
 // ---------- шторки
-function shell(title, inner, onClick) {
-  const r = document.createElement('div'); r.className = 'sheet';
-  r.innerHTML = `<div class="panel"><div class="ph"><button data-s="close" aria-label="Закрыть">✕</button><b>${title}</b></div>${inner}</div>`;
-  r.addEventListener('click', e => { if (e.target.closest('[data-s=close]')) return r.remove(); onClick(e, r); });
-  document.body.append(r); return r;
-}
 function newQuit() {
   let s = { kind: 0, custom: '', when: 'now', at: '', goal: 14 };
   const draw = r => {
@@ -100,16 +95,16 @@ function newQuit() {
 async function relapse(id) {
   const q = await db.get('quits', id); if (!q) return; const e = elapsed(q.start);
   let trig = '';
-  shell(`Срыв: «Без ${esc(q.name)}»`, `<div class="mut" style="font-size:14px;line-height:1.4">Серия ${e.d} дн ${pad(e.h)} ч сохранится в истории, таймер начнётся заново. Это нормально — важно, что ты записываешь.</div>
+  shell(`Срыв: «Без ${q.name}»`, `<div class="mut" style="font-size:14px;line-height:1.4">Серия ${e.d} дн ${pad(e.h)} ч сохранится в истории, таймер начнётся заново. Это нормально — важно, что ты записываешь.</div>
     <div class="lab">Что случилось?</div><div class="chips">${TRIG.map(t => `<button data-s="t" data-v="${t}" aria-pressed="false">${t}</button>`).join('')}</div>
     <input id="note" placeholder="Заметка (по желанию)"><button class="save danger" data-s="ok">Записать срыв и сбросить</button><button class="ghost" data-s="close">Отмена</button>`,
   async (ev, r) => {
     const b = ev.target.closest('[data-s]'); if (!b) return;
     if (b.dataset.s === 't') { trig = trig === b.dataset.v ? '' : b.dataset.v; r.querySelectorAll('[data-s=t]').forEach(x => x.setAttribute('aria-pressed', x.dataset.v === trig)); }
     if (b.dataset.s === 'ok') {
-      const end = Date.now();
-      await db.put('quitHistory', { quitId: q.id, name: q.name, start: q.start, end, trigger: trig, comment: r.querySelector('#note').value.trim() });
+      const end = Date.now(), h = await db.put('quitHistory', { quitId: q.id, name: q.name, start: q.start, end, trigger: trig, comment: r.querySelector('#note').value.trim() });
       await db.put('quits', { ...q, start: end }); r.remove(); render();
+      toast('Срыв записан, отсчёт заново', { undo: async () => { await db.del('quitHistory', h.id); await db.put('quits', q); render(); } });
     }
   });
 }
@@ -129,9 +124,8 @@ async function editQuit(id) {
       if (!(start <= Date.now())) return toast('Начало не может быть в будущем');
       await db.put('quits', { ...q, name, goal, start }); r.remove(); return render();
     }
-    if (b.dataset.s === 'del' && confirm(`Удалить «Без ${q.name}»${hist.length ? ' вместе с прошлыми сериями' : ''}? Это нельзя отменить.`)) {
-      for (const h of hist) await db.del('quitHistory', h.id);
-      await db.del('quits', q.id); r.remove(); render(); toast('Серия удалена');
+    if (b.dataset.s === 'del' && await ask(`Удалить «Без ${q.name}»?`, { text: hist.length ? `Вместе с ней удалятся прошлые серии: ${hist.length}.` : '', ok: 'Удалить', danger: true })) {
+      r.remove(); await removeWithUndo([['quits', q], ...hist.map(h => ['quitHistory', h])], 'Серия удалена', render);
     }
   });
 }
@@ -143,7 +137,7 @@ async function editHist(id) {
     const b = ev.target.closest('[data-s]'); if (!b) return;
     if (b.dataset.s === 't') { h.trigger = h.trigger === b.dataset.v ? '' : b.dataset.v; r.querySelectorAll('[data-s=t]').forEach(x => x.setAttribute('aria-pressed', x.dataset.v === h.trigger)); }
     if (b.dataset.s === 'ok') { await db.put('quitHistory', { ...h, comment: r.querySelector('#note').value.trim() }); r.remove(); render(); }
-    if (b.dataset.s === 'del' && confirm('Удалить эту серию из истории?')) { await db.del('quitHistory', h.id); r.remove(); render(); }
+    if (b.dataset.s === 'del') { r.remove(); await removeWithUndo([['quitHistory', h]], 'Серия удалена из истории', render); }
   });
 }
 async function newHabit(h) {
@@ -155,9 +149,9 @@ async function newHabit(h) {
       const b = ev.target.closest('[data-s]'); if (!b) return;
       if (b.dataset.s === 'day') { const k = b.dataset.k, id = h.id + '|' + k; if (done.has(k)) { done.delete(k); await db.del('habitLog', id); } else { done.add(k); await db.put('habitLog', { id, habitId: h.id, date: k }); } b.setAttribute('aria-pressed', done.has(k)); return; }
       if (b.dataset.s === 'ok') { const n = r.querySelector('#hn').value.trim(); if (!n) return r.querySelector('#hn').focus(); await db.put('habits', { ...(h || { created: Date.now() }), name: n }); r.remove(); render(); }
-      if (b.dataset.s === 'del' && confirm(`Удалить привычку «${h.name}» вместе со всеми отметками?`)) {
-        for (const l of await db.all('habitLog')) if (l.habitId === h.id) await db.del('habitLog', l.id);
-        await db.del('habits', h.id); r.remove(); render(); toast('Привычка удалена');
+      if (b.dataset.s === 'del') {
+        const logs = (await db.all('habitLog')).filter(l => l.habitId === h.id);
+        r.remove(); await removeWithUndo([['habits', h], ...logs.map(l => ['habitLog', l])], `Привычка «${h.name}» удалена`, render);
       }
     });
   if (!h) setTimeout(() => document.querySelector('#hn')?.focus(), 50);

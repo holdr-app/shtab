@@ -4,6 +4,7 @@ import { esc, dayKey, rub, MONTHS_G } from './lib.js';
 import { workState, loadShift } from './plan.js';
 import { elapsed } from './habits.js';
 import { openAdd } from './finance.js';
+import { ICON, toast } from './ui.js';
 
 let host;
 const addDays = (k, n) => { const [y, m, d] = k.split('-').map(Number); return dayKey(new Date(y, m - 1, d + n).getTime()); };
@@ -27,19 +28,19 @@ async function render() {
   const q = quits.length ? quits.map(q => ({ q, e: elapsed(q.start) })).sort((a, b) => b.e.days - a.e.days)[0] : null;
   const md = today.slice(5), ago = diary.filter(e => e.date.slice(5) === md && e.date < today);
   const C = 2 * Math.PI * 50, R = (pct / 100 * C).toFixed(1);
-  host.innerHTML = `<div class="tg"><div><h1>${greet()}</h1><div class="mut">${WD[now.getDay()]}, ${now.getDate()} ${MONTHS_G[now.getMonth()]}</div></div><div class="tgb"><a href="#search" class="btn" aria-label="Поиск">Поиск</a><a href="#reports" class="btn">Отчёты</a><a href="#settings" class="gear" aria-label="Настройки">⚙</a></div></div>
-  <div class="card ringc"><svg viewBox="0 0 120 120" width="150" height="150" role="img" aria-label="Выполнено ${pct}% на сегодня"><circle cx="60" cy="60" r="50" fill="none" stroke="#2A2A2E" stroke-width="10"/><circle class="rg" cx="60" cy="60" r="50" fill="none" stroke="var(--acc)" stroke-width="10" stroke-linecap="round" stroke-dasharray="${R} ${C}" transform="rotate(-90 60 60)" style="filter:drop-shadow(0 0 6px rgba(198,255,61,.55))"/></svg>
-    <div class="rt"><b>${totals ? doneN + ' из ' + totals : '—'}</b><span class="mut">дел на сегодня</span>${w === null ? '' : `<span class="pill ${w ? 'on' : ''}">${w ? 'Рабочий день' : 'Выходной'}</span>`}</div></div>
+  host.innerHTML = `<div class="tg"><div><h1>${greet()}</h1><div class="mut">${WD[now.getDay()]}, ${now.getDate()} ${MONTHS_G[now.getMonth()]}</div></div><div class="tgb"><a href="#search" class="gear" aria-label="Поиск">${ICON.search}</a><a href="#reports" class="gear" aria-label="Отчёты">${ICON.chart}</a><a href="#settings" class="gear" aria-label="Настройки">${ICON.gear}</a></div></div>
+  <div class="card ringc"><svg viewBox="0 0 120 120" width="150" height="150" role="img" aria-label="Выполнено ${pct}% на сегодня"><circle cx="60" cy="60" r="50" fill="none" stroke="#2A2A2E" stroke-width="10"/>${pct ? '' : '<!--'}<circle class="rg" cx="60" cy="60" r="50" fill="none" stroke="var(--acc)" stroke-width="10" stroke-linecap="round" stroke-dasharray="${R} ${C}" transform="rotate(-90 60 60)" style="filter:drop-shadow(0 0 6px rgba(198,255,61,.55))"/>${pct ? '' : '-->'}</svg>
+    <div class="rt"><b>${totals ? doneN + ' из ' + totals : 'Пусто'}</b><span class="mut">${totals ? (doneN === totals ? 'всё сделано' : 'привычек и задач на сегодня') : 'добавь привычки или задачи'}</span>${w === null ? '' : `<span class="pill ${w ? 'on' : ''}">${w ? 'Рабочий день' : 'Выходной'}</span>`}</div></div>
   <div class="bento">
     <a class="card tile" href="#money"><div class="lab">Потрачено сегодня</div><b class="bigl">${rub(spend[6])}</b><svg viewBox="0 0 100 32" preserveAspectRatio="none" height="32" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="var(--acc)" stroke-width="2" vector-effect="non-scaling-stroke"/></svg><small class="mut">за 7 дней: ${rub(spend.reduce((a, b) => a + b, 0))}</small></a>
-    <div class="card tile"><div class="lab">Завтра</div><b class="bigl">${w2 === null ? '—' : w2 ? 'Работа' : 'Выходной'}</b><small class="mut">${w2 === null ? 'график не задан' : 'по графику смен'}</small></div>
+    <a class="card tile" href="#plan"><div class="lab">Завтра</div><b class="bigl">${w2 === null ? '—' : w2 ? 'Работа' : 'Выходной'}</b><small class="mut">${w2 === null ? 'задать график смен ›' : 'по графику смен'}</small></a>
   </div>
   <div class="card"><div class="lab">Настроение дня <span class="mut">${mood ? MOOD_T[mood - 1] : 'не отмечено'}</span></div><div class="moods">${MOOD_T.map((t, i) => `<button data-act="mood" data-v="${i + 1}" aria-pressed="${mood === i + 1}" aria-label="${t}">${i + 1}</button>`).join('')}</div></div>
   ${q ? `<a class="card tile qt" href="#habits"><div class="lab">Без ${esc(q.q.name)}</div><b class="bigl">${q.e.d} дн ${String(q.e.h).padStart(2, '0')} ч</b></a>` : ''}
-  <div class="card"><div class="lab">Привычки <a href="#habits" class="mut">все ›</a></div>${habits.length ? habits.map(h => `<div class="trow"><button class="chk" data-act="hab" data-id="${esc(h.id)}" aria-pressed="${doneSet.has(h.id)}" aria-label="${esc(h.name)}">${doneSet.has(h.id) ? '✓' : ''}</button><b class="${doneSet.has(h.id) ? 'done' : ''}">${esc(h.name)}</b></div>`).join('') : '<div class="mut">Привычек пока нет — добавь их во вкладке «Привычки».</div>'}</div>
-  <div class="card"><div class="lab">Задачи на сегодня <a href="#plan" class="mut">все ›</a></div>${tToday.length ? tToday.map(t => `<div class="trow"><button class="chk" data-act="task" data-id="${esc(t.id)}" aria-pressed="${!!t.done}" aria-label="${esc(t.title)}">${t.done ? '✓' : ''}</button><b class="${t.done ? 'done' : ''}">${esc(t.title)}</b></div>`).join('') : '<div class="mut">На сегодня задач нет.</div>'}</div>
+  <div class="card"><div class="lab">Привычки <a href="#habits" class="mut">все ›</a></div>${habits.length ? habits.map(h => `<button class="trow htog" data-act="hab" data-id="${esc(h.id)}" aria-pressed="${doneSet.has(h.id)}" aria-label="${esc(h.name)}: ${doneSet.has(h.id) ? 'выполнено' : 'не выполнено'}"><span class="chk" aria-hidden="true">${doneSet.has(h.id) ? ICON.check : ''}</span><b class="${doneSet.has(h.id) ? 'done' : ''}">${esc(h.name)}</b></button>`).join('') : '<a class="mut" href="#habits">Привычек пока нет — добавить ›</a>'}</div>
+  <div class="card"><div class="lab">Задачи на сегодня <a href="#plan" class="mut">все ›</a></div>${tToday.length ? tToday.map(t => `<button class="trow htog" data-act="task" data-id="${esc(t.id)}" aria-pressed="${!!t.done}" aria-label="${esc(t.title)}: ${t.done ? 'выполнено' : 'не выполнено'}"><span class="chk" aria-hidden="true">${t.done ? ICON.check : ''}</span><b class="${t.done ? 'done' : ''}">${esc(t.title)}${t.due < today ? ' <small style="color:var(--over)">просрочено</small>' : ''}</b></button>`).join('') : '<a class="mut" href="#plan">На сегодня задач нет — добавить ›</a>'}</div>
   ${ago.length ? `<div class="card"><div class="lab">На этот день</div>${ago.slice(0, 2).map(e => `<p class="mut" style="margin:4px 0"><b style="color:var(--ink)">${e.date.slice(0, 4)}:</b> ${esc(e.text.slice(0, 120))}</p>`).join('')}</div>` : ''}
-  <button class="fab" data-act="exp" aria-label="Быстрая трата">+</button>`;
+  <button class="fab" data-act="exp" aria-label="Быстрая трата">${ICON.plus}</button>`;
 }
 async function onClick(e) {
   const b = e.target.closest('[data-act]'); if (!b) return; const a = b.dataset.act, today = dayKey(Date.now());

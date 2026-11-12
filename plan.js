@@ -1,7 +1,7 @@
 import { register } from './registry.js';
 import * as db from './db.js';
 import { esc, dayKey, pad, MONTHS, MONTHS_G } from './lib.js';
-import { shell, toast } from './ui.js';
+import { shell, toast, removeWithUndo, ICON, relDay } from './ui.js';
 
 const st = { tab: 'tasks', off: 0, sel: dayKey(Date.now()), showDone: false };
 let host;
@@ -25,9 +25,9 @@ async function tasksView() {
   const ts = await db.all('tasks'), today = dayKey(Date.now());
   const open = ts.filter(t => !t.done).sort((a, b) => (a.due || '9').localeCompare(b.due || '9') || a.created - b.created), done = ts.filter(t => t.done).sort((a, b) => b.doneAt - a.doneAt);
   const groups = [['Просрочено', open.filter(t => t.due && t.due < today)], ['Сегодня', open.filter(t => t.due === today)], ['Позже', open.filter(t => t.due > today)], ['Без даты', open.filter(t => !t.due)]];
-  const row = t => `<div class="trow"><button class="chk" data-act="done" data-id="${esc(t.id)}" aria-pressed="${!!t.done}" aria-label="${esc(t.title)}: ${t.done ? 'выполнено' : 'не выполнено'}">${t.done ? '✓' : ''}</button><button class="tt" data-act="edit" data-id="${esc(t.id)}"><b class="${t.done ? 'done' : ''}">${esc(t.title)}</b>${t.due ? `<small style="${t.due < today && !t.done ? 'color:var(--over)' : ''}">${fmt(t.due)}</small>` : ''}</button></div>`;
+  const row = t => `<div class="trow"><button class="chkb" data-act="done" data-id="${esc(t.id)}" aria-pressed="${!!t.done}" aria-label="${esc(t.title)}: ${t.done ? 'выполнено' : 'отметить выполненной'}"><span class="chk" aria-hidden="true">${t.done ? ICON.check : ''}</span></button><button class="tt" data-act="edit" data-id="${esc(t.id)}"><b class="${t.done ? 'done' : ''}">${esc(t.title)}</b>${t.due ? `<small style="${t.due < today && !t.done ? 'color:var(--over)' : ''}">${relDay(t.due, MONTHS_G)}${t.due < today && !t.done ? ' · просрочено' : ''}</small>` : ''}</button></div>`;
   const html = groups.filter(([, a]) => a.length).map(([n, a]) => `<div class="dh"><span>${n}</span><span>${a.length}</span></div><div class="card hl">${a.map(row).join('')}</div>`).join('')
-    || '<div class="card mut">Открытых задач нет. Нажми «+», чтобы добавить.</div>';
+    || `<div class="empty"><b>${done.length ? 'Все задачи сделаны' : 'Задач пока нет'}</b><p>Добавь дело и, если нужно, срок: оно появится на главном экране в свой день.</p><button class="save" data-act="add">Добавить задачу</button></div>`;
   const dn = done.length ? `<button class="btn" data-act="sd">${st.showDone ? 'Скрыть выполненные' : 'Выполненные: ' + done.length}</button>${st.showDone ? `<div class="card hl">${done.slice(0, 30).map(row).join('')}</div>` : ''}` : '';
   return html + dn;
 }
@@ -42,7 +42,7 @@ async function schedView() {
     cells += `<button class="day ${w === true ? 'w' : ''} ${k === today ? 't' : ''}" data-act="sel" data-k="${k}" aria-pressed="${k === st.sel}" aria-label="${i} ${MONTHS_G[m]}${w === true ? ', рабочий день' : w === false ? ', выходной' : ''}">${i}${withTask.has(k) ? '<i></i>' : ''}</button>`;
   }
   const w = workState(st.sel, rule, over), dayTasks = tasks.filter(t => t.due === st.sel && !t.done);
-  const info = `<div class="card"><div class="lab">${fmt(st.sel)} <span class="mut">${w === null ? 'график не задан' : w ? 'рабочий день' : 'выходной'}</span></div>
+  const info = `<div class="card dayinfo"><div class="lab">${fmt(st.sel)} <span class="mut">${w === null ? 'график не задан' : w ? 'рабочий день' : 'выходной'}</span></div>
     ${rule ? `<button class="btn" data-act="flip">${w ? 'Сделать выходным' : 'Сделать рабочим'}</button>` : ''}
     ${dayTasks.length ? dayTasks.map(t => `<div class="item"><div><b>${esc(t.title)}</b></div></div>`).join('') : '<div class="mut" style="margin-top:8px">Задач на этот день нет.</div>'}</div>`;
   return `<div class="mnav"><button data-act="prev" aria-label="Предыдущий месяц">‹</button><span>${MONTHS[m]} ${y}</span><button data-act="next" aria-label="Следующий месяц">›</button></div>
@@ -61,8 +61,8 @@ function taskSheet(t) {
   const sync = r => { s.title = r.querySelector('#tt').value; s.due = r.querySelector('#dd').value; };
   const r = shell(t ? 'Задача' : 'Новая задача', '', async (ev, r) => {
     const b = ev.target.closest('[data-s]'); if (!b) return; sync(r); const a = b.dataset.s;
-    if (a === 'd') s.due = b.dataset.v;
-    if (a === 'del' && confirm('Удалить задачу?')) { await db.del('tasks', t.id); r.remove(); return render(); }
+    if (a === 'd') { s.due = b.dataset.v; r.dataset.dirty = '1'; }
+    if (a === 'del') { r.remove(); return removeWithUndo([['tasks', t]], 'Задача удалена', render); }
     if (a === 'ok') { if (!s.title.trim()) return r.querySelector('#tt').focus(); await db.put('tasks', { ...(t || { created: Date.now(), done: false }), title: s.title.trim(), due: s.due }); r.remove(); return render(); }
     draw(r);
   });
@@ -86,7 +86,7 @@ async function ruleSheet() {
 
 async function render() {
   const body = st.tab === 'tasks' ? await tasksView() : await schedView();
-  host.innerHTML = `<h1>План</h1><div class="seg"><button data-act="tab" data-v="tasks" aria-selected="${st.tab === 'tasks'}">Задачи</button><button data-act="tab" data-v="sched" aria-selected="${st.tab === 'sched'}">Расписание</button></div>${body}${st.tab === 'tasks' ? '<button class="fab" data-act="add" aria-label="Добавить задачу">+</button>' : ''}`;
+  host.innerHTML = `<h1>План</h1><div class="seg"><button data-act="tab" data-v="tasks" aria-selected="${st.tab === 'tasks'}">Задачи</button><button data-act="tab" data-v="sched" aria-selected="${st.tab === 'sched'}">Расписание</button></div>${body}${st.tab === 'tasks' ? `<button class="fab" data-act="add" aria-label="Добавить задачу">${ICON.plus}</button>` : ''}`;
 }
 async function onClick(e) {
   const b = e.target.closest('[data-act]'); if (!b) return; const a = b.dataset.act;
@@ -94,10 +94,10 @@ async function onClick(e) {
   if (a === 'add') return taskSheet();
   if (a === 'edit') return taskSheet(await db.get('tasks', b.dataset.id));
   if (a === 'sd') { st.showDone = !st.showDone; return render(); }
-  if (a === 'done') { const t = await db.get('tasks', b.dataset.id); t.done = !t.done; t.doneAt = t.done ? Date.now() : null; await db.put('tasks', t); return render(); }
+  if (a === 'done') { const t = await db.get('tasks', b.dataset.id), was = { ...t }; t.done = !t.done; t.doneAt = t.done ? Date.now() : null; await db.put('tasks', t); await render(); if (t.done) toast('Задача выполнена', { undo: async () => { await db.put('tasks', was); render(); } }); return; }
   if (a === 'prev') { st.off--; return render(); }
   if (a === 'next') { st.off++; return render(); }
-  if (a === 'sel') { st.sel = b.dataset.k; return render(); }
+  if (a === 'sel') { st.sel = b.dataset.k; await render(); return host.querySelector('.dayinfo')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
   if (a === 'rule') return ruleSheet();
   if (a === 'flip') {
     const { rule, over } = await loadShift(), cur = workState(st.sel, rule, over), auto = workState(st.sel, rule, {});

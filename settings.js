@@ -1,6 +1,6 @@
 import { register } from './registry.js';
 import * as db from './db.js';
-import { toast, shell } from './ui.js';
+import { toast, shell, ask } from './ui.js';
 import { dayKey } from './lib.js';
 import { importCsv } from './finance.js';
 import { getLock, setPin, clearPin, setAuto } from './lock.js';
@@ -34,7 +34,7 @@ function pinSheet() {
 }
 register('settings', async el => { host = el; el.onclick = async e => {
   const b = e.target.closest('[data-act]'); if (!b || b.tagName === 'INPUT') return; const a = b.dataset.act;
-  if (a === 'pin') { if (await getLock()) { if (confirm('Отключить код-пароль?')) { await clearPin(); render(); } } else pinSheet(); }
+  if (a === 'pin') { if (await getLock()) { if (await ask('Отключить код-пароль?', { text: 'Приложение будет открываться без кода.', ok: 'Отключить', danger: true })) { await clearPin(); render(); } } else pinSheet(); }
   if (a === 'backup') {
     const blob = new Blob([JSON.stringify(await db.exportAll())], { type: 'application/json' }), u = URL.createObjectURL(blob), l = document.createElement('a');
     l.href = u; l.download = `shtab-${dayKey(Date.now())}.json`; l.click(); setTimeout(() => URL.revokeObjectURL(u), 5000);
@@ -46,6 +46,6 @@ el.onchange = async e => {
   if (i.type !== 'file' || !i.files[0]) return; const text = await i.files[0].text(), a = i.dataset.act; i.value = '';
   try {
     if (a === 'csv') { const { added, total } = await importCsv(text); toast(`Добавлено ${added} из ${total}`); }
-    if (a === 'restore') { await db.importAll(JSON.parse(text)); toast('Копия восстановлена'); }
+    if (a === 'restore') { const o = JSON.parse(text); if (!await ask('Восстановить из копии?', { text: `Копия от ${o.at ? new Date(o.at).toLocaleDateString('ru-RU') : '?'}. Записи из неё добавятся к текущим, совпадающие заменятся.`, ok: 'Восстановить' })) return; await db.importAll(o); toast('Копия восстановлена'); render(); }
   } catch (err) { toast(err.message || 'Не удалось прочитать файл'); }
 }; await render(); });

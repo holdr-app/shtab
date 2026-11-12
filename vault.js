@@ -1,7 +1,7 @@
 import { register } from './registry.js';
 import * as db from './db.js';
 import { esc, dayKey } from './lib.js';
-import { shell, toast, readAsDataURL, shrinkImage } from './ui.js';
+import { shell, toast, readAsDataURL, shrinkImage, removeWithUndo, ICON } from './ui.js';
 
 const st = { f: 'all', q: '' };
 let host;
@@ -19,7 +19,7 @@ async function render() {
   const items = list.map(i => `<button class="card vi" data-act="open" data-id="${esc(i.id)}"><span class="tag">${TN[i.type]}</span><b class="${i.done ? 'done' : ''}">${esc(i.title || host_(i.url || '') || 'Без названия')}</b>${i.url ? `<small>${esc(host_(i.url))}</small>` : ''}${i.note ? `<p>${esc(i.note.slice(0, 120))}</p>` : ''}${i.thumb ? `<img src="${i.thumb}" alt="Вложение">` : ''}</button>`).join('')
     || `<div class="card mut">${all.length ? 'Ничего не найдено.' : 'Склад пуст. Нажми «+» или «Вставить из буфера», чтобы сохранить ссылку, фильм, файл или идею.'}</div>`;
   host.innerHTML = `<h1>Склад</h1><input id="q" type="search" placeholder="Поиск по складу" aria-label="Поиск" value="${esc(st.q)}"><div class="chips tabs">${chips}</div>
-    <button class="btn wide" data-act="paste">Вставить из буфера</button>${items}<button class="fab" data-act="add" aria-label="Добавить">+</button>`;
+    <button class="btn wide" data-act="paste">Вставить из буфера</button>${items}<button class="fab" data-act="add" aria-label="Добавить на склад">${ICON.plus}</button>`;
   const qi = host.querySelector('#q'); qi.oninput = () => { st.q = qi.value; clearTimeout(render.t); render.t = setTimeout(async () => { const p = qi.selectionStart; await render(); const n = host.querySelector('#q'); n.focus(); n.setSelectionRange(p, p); }, 250); };
 }
 
@@ -47,9 +47,9 @@ function sheet(it = {}) {
   };
   const r = shell(it.id ? 'Элемент склада' : 'Новый элемент', '', async (ev, r) => {
     const b = ev.target.closest('[data-s]'); if (!b) return; sync(r); const a = b.dataset.s;
-    if (a === 'type') s.type = b.dataset.v;
+    if (a === 'type') { s.type = b.dataset.v; r.dataset.dirty = '1'; }
     if (a === 'done') s.done = !s.done;
-    if (a === 'del' && confirm('Удалить из склада?')) { await db.del('vault', it.id); r.remove(); return render(); }
+    if (a === 'del') { r.remove(); return removeWithUndo([['vault', it]], 'Удалено со склада', render); }
     if (a === 'save') {
       if (!(s.title.trim() || s.url.trim() || s.note.trim() || s.file)) return toast('Добавь хотя бы название');
       await db.put('vault', { id: it.id, type: s.type, title: s.title.trim(), url: s.type === 'link' ? s.url.trim() : '', note: s.note.trim(), done: s.done, file: s.type === 'file' ? s.file : null, fname: s.fname, thumb: s.thumb, ts: it.ts || Date.now() });

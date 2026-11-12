@@ -19,3 +19,5 @@ export const put = (s, o) => { o.id = o.id || uid(); return tx(s, 'readwrite', s
 export const del = (s, id) => tx(s, 'readwrite', st => st.delete(id));
 export const exportAll = async () => { const o = { app: 'shtab', v: 1, at: new Date().toISOString() }; for (const s of STORES) o[s] = await all(s); return o; };
 export const importAll = async o => { if (o.app !== 'shtab') throw new Error('Это не копия Штаба'); for (const s of STORES) for (const r of (o[s] || [])) await put(s, r); };
+
+export const wipe = async () => { for (const s of STORES) for (const r of await all(s)) await del(s, r.id); };
