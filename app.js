@@ -47,3 +47,5 @@ if ('serviceWorker' in navigator) {
 window.shtab = { db, go };
 go(TABS.some(t => t[0] === cur) || EXTRA[cur] ? cur : 'today');
 initLock();
+// просим браузер не вытеснять данные приложения при нехватке места
+navigator.storage?.persist?.().catch(() => {});
