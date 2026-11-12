@@ -88,3 +88,7 @@ input[type=search]{width:100%}.dyn{display:flex;flex-direction:column;gap:12px}
 .insl{margin:0 0 8px;font-size:14px;line-height:1.4}.card>.insl:last-of-type{margin-bottom:0}
 .tgb{display:flex;align-items:center;gap:4px}
 .crd{display:block;width:100%;text-align:left;color:var(--ink)}.cl{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}.cl b{font-size:24px}
+.qa{display:flex;align-items:center;gap:2px}
+.hdays{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.hdays button{min-height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card);font-size:14px}
+.lnk{border:0;background:none;color:var(--acc);font-size:13px;font-weight:600;min-height:32px;padding:0}
+.crow{border-top:1px solid var(--line)}.crow:first-child{border-top:0}.crow .item{border-top:0}.cedit{padding:0 0 12px}
