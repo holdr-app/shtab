@@ -4,6 +4,7 @@ import './finance.js';
 import './habits.js';
 import './diary.js';
 import './vault.js';
+import './plan.js';
 const TABS = [
   ['today', 'Сегодня', '<circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/>'],
   ['diary', 'Дневник', '<path d="M6 3h12v18H6z"/><path d="M9 8h6M9 12h6"/>'],
