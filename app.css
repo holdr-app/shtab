@@ -43,3 +43,14 @@ button{font:inherit;color:inherit}
 .row3 input,.row3 select{flex:1;min-width:0}#cm{width:100%}
 .save{min-height:54px;border:0;border-radius:16px;background:var(--acc);color:var(--onacc);font-size:17px;font-weight:700;margin-top:4px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:110px;background:var(--segon);color:var(--ink);padding:12px 16px;border-radius:12px;font-size:14px;z-index:20}
+.hl{padding:4px 16px}.hrow{display:flex;align-items:center;gap:12px;min-height:60px;border-top:1px solid var(--line)}.hrow:first-child{border-top:0}
+.chk{width:36px;height:36px;border-radius:50%;border:2px solid var(--line);background:transparent;color:var(--onacc);font-size:18px;font-weight:700;flex:none}
+.chk[aria-pressed=true]{background:var(--acc);border-color:var(--acc);box-shadow:0 0 14px rgba(198,255,61,.4)}
+.hn{flex:1;min-width:0}.hn b{font-size:15px}.dots{display:flex;gap:4px;margin-top:6px}.dots i{width:14px;height:5px;border-radius:3px;background:#2A2A2E}.dots i.on{background:var(--acc)}
+.stk{font-size:13px;color:var(--mut);font-weight:600}.more{width:44px;height:44px;border:0;background:none;color:var(--mut);font-size:20px}
+.qc .qh{display:flex;justify-content:space-between;align-items:center}.qc small{display:block;color:var(--mut);font-size:12px}
+.relapse{min-height:44px;padding:0 14px;border-radius:12px;border:1.5px solid var(--over);background:none;color:var(--over);font-weight:700}
+.big{display:flex;align-items:baseline;gap:6px;margin:8px 0 12px;font-variant-numeric:tabular-nums}.big span{font-size:44px;font-weight:700;letter-spacing:-.03em;line-height:1}.big small{margin-right:8px;font-size:14px}
+.qf{display:flex;justify-content:space-between;font-size:12px;color:var(--mut);margin-top:6px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.g4 button{min-height:64px;border-radius:14px;border:1px solid var(--line);background:var(--card);padding:4px;font-size:12px}
+.danger{background:var(--over)!important;color:#1A0B09!important}.ghost{min-height:44px;border:0;background:none;font-weight:600}.danger-t{color:var(--over)}
