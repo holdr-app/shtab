@@ -89,6 +89,13 @@ function sheet(type = 'exp', pre = {}) {
 }
 function toast(t) { const x = document.createElement('div'); x.className = 'toast'; x.textContent = t; document.body.append(x); setTimeout(() => x.remove(), 2200); }
 
+export async function importCsv(text) {
+  await load();
+  const rows = parseOldExport(text), have = new Set(recs.map(r => r.id)), fresh = rows.filter(r => !have.has(r.id));
+  for (const r of fresh) await db.put('money', r);
+  cats = mergeCats(cats, rows); await saveCats();
+  return { added: fresh.length, total: rows.length };
+}
 export async function openAdd() { await load(); sheet('exp'); }
 let host;
 async function render() {
@@ -117,9 +124,7 @@ async function onChange(e) {
   const i = e.target.closest('input[type=file]'); if (!i || !i.files[0]) return; const a = i.dataset.act, text = await i.files[0].text(); i.value = '';
   try {
     if (a === 'import') {
-      const rows = parseOldExport(text), have = new Set(recs.map(r => r.id)), fresh = rows.filter(r => !have.has(r.id));
-      for (const r of fresh) await db.put('money', r);
-      cats = mergeCats(cats, rows); await saveCats(); toast(`Добавлено ${fresh.length} из ${rows.length}`);
+      const { added, total } = await importCsv(text); toast(`Добавлено ${added} из ${total}`);
     } else { await db.importAll(JSON.parse(text)); toast('Копия восстановлена'); }
     render();
   } catch (err) { toast(err.message || 'Не удалось прочитать файл'); }
