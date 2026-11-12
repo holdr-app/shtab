@@ -27,7 +27,7 @@ async function render() {
   const q = quits.length ? quits.map(q => ({ q, e: elapsed(q.start) })).sort((a, b) => b.e.days - a.e.days)[0] : null;
   const md = today.slice(5), ago = diary.filter(e => e.date.slice(5) === md && e.date < today);
   const C = 2 * Math.PI * 50, R = (pct / 100 * C).toFixed(1);
-  host.innerHTML = `<div class="tg"><div><h1>${greet()}</h1><div class="mut">${WD[now.getDay()]}, ${now.getDate()} ${MONTHS_G[now.getMonth()]}</div></div><div class="tgb"><a href="#reports" class="btn">Отчёты</a><a href="#settings" class="gear" aria-label="Настройки">⚙</a></div></div>
+  host.innerHTML = `<div class="tg"><div><h1>${greet()}</h1><div class="mut">${WD[now.getDay()]}, ${now.getDate()} ${MONTHS_G[now.getMonth()]}</div></div><div class="tgb"><a href="#search" class="btn" aria-label="Поиск">Поиск</a><a href="#reports" class="btn">Отчёты</a><a href="#settings" class="gear" aria-label="Настройки">⚙</a></div></div>
   <div class="card ringc"><svg viewBox="0 0 120 120" width="150" height="150" role="img" aria-label="Выполнено ${pct}% на сегодня"><circle cx="60" cy="60" r="50" fill="none" stroke="#2A2A2E" stroke-width="10"/><circle class="rg" cx="60" cy="60" r="50" fill="none" stroke="var(--acc)" stroke-width="10" stroke-linecap="round" stroke-dasharray="${R} ${C}" transform="rotate(-90 60 60)" style="filter:drop-shadow(0 0 6px rgba(198,255,61,.55))"/></svg>
     <div class="rt"><b>${totals ? doneN + ' из ' + totals : '—'}</b><span class="mut">дел на сегодня</span>${w === null ? '' : `<span class="pill ${w ? 'on' : ''}">${w ? 'Рабочий день' : 'Выходной'}</span>`}</div></div>
   <div class="bento">

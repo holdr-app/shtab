@@ -3,12 +3,13 @@ import * as db from './db.js';
 import { rub, esc, pad, dayKey, MONTHS, MONTHS_G, parseOldExport, DEFAULT_CATS, mergeCats } from './lib.js';
 
 const st = { tab: 'ov', off: 0 };           // вкладка и сдвиг месяца
-let recs = [], cats = null, limits = {};
+let recs = [], cats = null, limits = {}, credit = null;
 
 async function load() {
   recs = await db.all('money');
   const c = await db.get('settings', 'cats'); cats = c ? c.v : structuredClone(DEFAULT_CATS);
   const l = await db.get('settings', 'limits'); limits = l ? l.v : {};
+  const cr = await db.get('settings', 'credit'); credit = cr ? cr.v : null;
 }
 const saveCats = () => db.put('settings', { id: 'cats', v: cats });
 const saveLimits = () => db.put('settings', { id: 'limits', v: limits });
@@ -32,8 +33,11 @@ function overview(d) {
     const w = lim ? Math.min(100, pct) : (a / exp * 100);
     return `<button class="catrow" data-act="limit" data-n="${esc(n)}"><div class="l"><span>${esc(n)} ${tag}</span><span><b>${rub(a)}</b>${lim ? `<span class="mut"> из ${rub(lim)}</span>` : ''}</span></div><div class="bar"><i style="width:${w.toFixed(0)}%;background:${col}"></i></div></button>`;
   }).join('') || '<div class="mut">В этом месяце расходов нет.</div>';
+  const crd = credit ? (() => { const left = Math.max(0, credit.left), done = credit.total ? Math.round((1 - left / credit.total) * 100) : 0, mo = credit.pay ? Math.ceil(left / credit.pay) : 0;
+    return `<button class="card crd" data-act="credit"><div class="lab">Кредитка <span class="mut">изменить ›</span></div><div class="cl"><b>${rub(left)}</b><span class="mut">осталось${left && credit.pay ? ' · платежей: ' + mo : ''}</span></div><div class="bar"><i style="width:${done}%;background:var(--acc)"></i></div><div class="mut" style="font-size:13px;margin-top:8px">${left ? `Платёж ${rub(Math.min(credit.pay, left))} · ${credit.day} числа` : 'Кредитка закрыта'}</div></button>${left ? '<button class="btn wide" data-act="cpay">Платёж внесён</button>' : ''}`; })()
+    : '<button class="btn wide" data-act="credit">Добавить кредитку</button>';
   return `<div class="bal"><div>Остаток за месяц</div><strong>${bal >= 0 ? '+' : '−'}${rub(Math.abs(bal))}</strong><div class="two"><div><small>Доходы</small><b class="inc">+${rub(inc)}</b></div><div><small>Расходы</small><b>−${rub(exp)}</b></div></div></div>
-  <div class="card"><div class="lab">Расходы по категориям <span class="mut">нажми, чтобы задать лимит</span></div>${rows}</div>
+  ${crd}<div class="card"><div class="lab">Расходы по категориям <span class="mut">нажми, чтобы задать лимит</span></div>${rows}</div>
   <div class="card"><div class="lab">Данные</div><div class="btns"><label class="btn">Импорт CSV<input type="file" accept=".csv,text/csv" data-act="import" hidden></label><button class="btn" data-act="backup">Копия</button><label class="btn">Восстановить<input type="file" accept=".json,application/json" data-act="restore" hidden></label></div></div>`;
 }
 function history(d) {
@@ -89,6 +93,19 @@ function sheet(type = 'exp', pre = {}) {
 }
 function toast(t) { const x = document.createElement('div'); x.className = 'toast'; x.textContent = t; document.body.append(x); setTimeout(() => x.remove(), 2200); }
 
+function creditSheet() {
+  const c = credit || { total: '', left: '', pay: '', day: 15 };
+  const fld = (id, lab, v) => `<label class="mut">${lab}<input id="${id}" inputmode="decimal" value="${esc(v)}" style="width:100%"></label>`;
+  const r = document.createElement('div'); r.className = 'sheet';
+  r.innerHTML = `<div class="panel"><div class="ph"><button data-s="close" aria-label="Закрыть">✕</button><b>Кредитка</b></div>${fld('ct', 'Общая сумма долга, ₽', c.total)}${fld('cl', 'Осталось выплатить, ₽', c.left)}${fld('cp', 'Платёж в месяц, ₽', c.pay)}${fld('cd', 'День платежа (число)', c.day)}<button class="save" data-s="ok">Сохранить</button>${credit ? '<button class="ghost danger-t" data-s="del">Убрать кредитку</button>' : ''}</div>`;
+  r.addEventListener('click', async e => {
+    const b = e.target.closest('[data-s]'); if (!b) return; if (b.dataset.s === 'close') return r.remove();
+    if (b.dataset.s === 'del' && confirm('Убрать блок кредитки?')) { await db.del('settings', 'credit'); r.remove(); return render(); }
+    if (b.dataset.s === 'ok') { const n = id => parseFloat(r.querySelector('#' + id).value.replace(/\s/g, '').replace(',', '.')), v = { total: n('ct'), left: n('cl'), pay: n('cp'), day: Math.min(31, Math.max(1, Math.round(n('cd') || 1))) };
+      if (!(v.total > 0 && v.left >= 0 && v.pay > 0)) return toast('Заполни суммы'); await db.put('settings', { id: 'credit', v }); r.remove(); render(); }
+  });
+  document.body.append(r);
+}
 export async function importCsv(text) {
   await load();
   const rows = parseOldExport(text), have = new Set(recs.map(r => r.id)), fresh = rows.filter(r => !have.has(r.id));
@@ -109,6 +126,8 @@ async function onClick(e) {
   if (a === 'prev') { st.off--; return render(); }
   if (a === 'next') { if (st.off < 0) st.off++; return render(); }
   if (a === 'add') return sheet('exp');
+  if (a === 'cpay') { const p = Math.min(credit.pay, credit.left); if (!confirm(`Записать платёж ${rub(p)} и уменьшить остаток?`)) return; await db.put('money', { type: 'exp', amount: p, cat: 'Рассрочка/кредит', sub: '', account: 'Карта', comment: 'Платёж по кредитке', ts: Date.now() }); await db.put('settings', { id: 'credit', v: { ...credit, left: credit.left - p } }); return render(); }
+  if (a === 'credit') return creditSheet();
   if (a === 'limit') {
     const n = b.dataset.n, v = prompt(`Лимит на месяц для «${n}» (₽). Пусто — убрать.`, limits[n] || '');
     if (v === null) return; const x = parseFloat(v.replace(/\s/g, '').replace(',', '.'));
