@@ -7,6 +7,7 @@ import './vault.js';
 import './plan.js';
 import './today.js';
 import './settings.js';
+import './reports.js';
 import { initLock } from './lock.js';
 const TABS = [
   ['today', 'Сегодня', '<circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/>'],
@@ -17,7 +18,7 @@ const TABS = [
   ['vault', 'Склад', '<path d="M4 8h16v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8z"/><path d="M3 4h18v4H3zM10 12h4"/>']
 ];
 const nav = document.getElementById('nav'), view = document.getElementById('view');
-const EXTRA = { settings: 'Настройки' };
+const EXTRA = { settings: 'Настройки', reports: 'Отчёты' };
 let cur = location.hash.slice(1) || 'today';
 addEventListener('hashchange', () => { const n = location.hash.slice(1); if (n !== cur && (TABS.some(t => t[0] === n) || EXTRA[n])) go(n); });
 function drawNav() {
