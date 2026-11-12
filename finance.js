@@ -89,6 +89,7 @@ function sheet(type = 'exp', pre = {}) {
 }
 function toast(t) { const x = document.createElement('div'); x.className = 'toast'; x.textContent = t; document.body.append(x); setTimeout(() => x.remove(), 2200); }
 
+export async function openAdd() { await load(); sheet('exp'); }
 let host;
 async function render() {
   await load();

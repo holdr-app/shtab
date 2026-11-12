@@ -5,6 +5,7 @@ import './habits.js';
 import './diary.js';
 import './vault.js';
 import './plan.js';
+import './today.js';
 const TABS = [
   ['today', 'Сегодня', '<circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/>'],
   ['diary', 'Дневник', '<path d="M6 3h12v18H6z"/><path d="M9 8h6M9 12h6"/>'],
@@ -15,6 +16,7 @@ const TABS = [
 ];
 const nav = document.getElementById('nav'), view = document.getElementById('view');
 let cur = location.hash.slice(1) || 'today';
+addEventListener('hashchange', () => { const n = location.hash.slice(1); if (n !== cur && TABS.some(t => t[0] === n)) go(n); });
 function drawNav() {
   nav.innerHTML = TABS.map(([k, t, p]) => `<button data-t="${k}" aria-label="${t}" ${k === cur ? 'aria-current="page"' : ''}><svg viewBox="0 0 24 24" aria-hidden="true">${p}</svg></button>`).join('');
 }
