@@ -189,7 +189,7 @@ async function onClick(e) {
   if (a === 'cats') return catsSheet(b.dataset.v, render);
   if (a === 'backup') {
     const blob = new Blob([JSON.stringify(await db.exportAll())], { type: 'application/json' }), u = URL.createObjectURL(blob), l = document.createElement('a');
-    l.href = u; l.download = `shtab-${dayKey(Date.now())}.json`; l.click(); setTimeout(() => URL.revokeObjectURL(u), 5000);
+    l.href = u; l.download = `dojo-${dayKey(Date.now())}.json`; l.click(); setTimeout(() => URL.revokeObjectURL(u), 5000);
   }
 }
 async function onChange(e) {

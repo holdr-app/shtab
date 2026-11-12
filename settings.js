@@ -37,7 +37,7 @@ register('settings', async el => { host = el; el.onclick = async e => {
   if (a === 'pin') { if (await getLock()) { if (await ask('Отключить код-пароль?', { text: 'Приложение будет открываться без кода.', ok: 'Отключить', danger: true })) { await clearPin(); render(); } } else pinSheet(); }
   if (a === 'backup') {
     const blob = new Blob([JSON.stringify(await db.exportAll())], { type: 'application/json' }), u = URL.createObjectURL(blob), l = document.createElement('a');
-    l.href = u; l.download = `shtab-${dayKey(Date.now())}.json`; l.click(); setTimeout(() => URL.revokeObjectURL(u), 5000);
+    l.href = u; l.download = `dojo-${dayKey(Date.now())}.json`; l.click(); setTimeout(() => URL.revokeObjectURL(u), 5000);
     await db.put('settings', { id: 'lastBackup', v: Date.now() }); render();
   }
 };

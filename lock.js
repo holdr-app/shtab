@@ -13,7 +13,7 @@ export async function showLock() {
   const l = await getLock(); if (!l || overlay) return;
   overlay = document.createElement('div'); overlay.className = 'lockscr'; let pin = '';
   const draw = (msg = '') => {
-    overlay.innerHTML = `<div class="lk"><b>Штаб</b><div class="mut" role="status">${msg || 'Введи код'}</div><div class="dots4" aria-hidden="true">${[0, 1, 2, 3].map(i => `<i class="${i < pin.length ? 'on' : ''}"></i>`).join('')}</div>
+    overlay.innerHTML = `<div class="lk"><b>Dojo</b><div class="mut" role="status">${msg || 'Введи код'}</div><div class="dots4" aria-hidden="true">${[0, 1, 2, 3].map(i => `<i class="${i < pin.length ? 'on' : ''}"></i>`).join('')}</div>
     <div class="pad">${[1, 2, 3, 4, 5, 6, 7, 8, 9, '', 0, '⌫'].map(k => k === '' ? '<span></span>' : `<button data-k="${k}" aria-label="${k === '⌫' ? 'Стереть' : k}">${k}</button>`).join('')}</div><button class="ghost" data-forgot style="color:var(--mut)">Забыл код</button></div>`;
   };
   overlay.addEventListener('click', async e => {

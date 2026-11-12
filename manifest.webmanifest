@@ -1,13 +1,13 @@
 {
-  "name": "Штаб",
-  "short_name": "Штаб",
+  "name": "Dojo",
+  "short_name": "Dojo",
   "lang": "ru",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0B0B0C",
-  "theme_color": "#0B0B0C",
+  "background_color": "#111113",
+  "theme_color": "#111113",
   "icons": [
     {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
     {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},

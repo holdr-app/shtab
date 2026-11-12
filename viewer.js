@@ -29,7 +29,7 @@ export function openViewer(items, start = 0, { openLabel = 'К записи' } =
 
   async function save() {
     try {
-      const blob = await (await fetch(items[i].src)).blob(), file = new File([blob], `shtab-photo-${i + 1}.jpg`, { type: blob.type || 'image/jpeg' });
+      const blob = await (await fetch(items[i].src)).blob(), file = new File([blob], `dojo-photo-${i + 1}.jpg`, { type: blob.type || 'image/jpeg' });
       if (navigator.canShare?.({ files: [file] })) return await navigator.share({ files: [file] });
       const a = document.createElement('a'), u = URL.createObjectURL(blob); a.href = u; a.download = file.name; a.click(); setTimeout(() => URL.revokeObjectURL(u), 4000);
     } catch (e) { if (e.name !== 'AbortError') toast('Не получилось сохранить фото'); }
