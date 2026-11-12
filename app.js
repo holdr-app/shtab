@@ -1,4 +1,6 @@
 import * as db from './db.js';
+import { views } from './registry.js';
+import './finance.js';
 const TABS = [
   ['today', 'Сегодня', '<circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/>'],
   ['diary', 'Дневник', '<path d="M6 3h12v18H6z"/><path d="M9 8h6M9 12h6"/>'],
@@ -7,8 +9,6 @@ const TABS = [
   ['money', 'Финансы', '<path d="M4 7a2 2 0 0 1 2-2h12v4"/><rect x="4" y="9" width="16" height="11" rx="2"/><path d="M16 14.5h2"/>'],
   ['vault', 'Склад', '<path d="M4 8h16v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8z"/><path d="M3 4h18v4H3zM10 12h4"/>']
 ];
-const views = {};   // name -> async render(el)
-export const register = (name, fn) => { views[name] = fn; };
 const nav = document.getElementById('nav'), view = document.getElementById('view');
 let cur = location.hash.slice(1) || 'today';
 function drawNav() {

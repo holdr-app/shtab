@@ -11,7 +11,7 @@ function open() {
     r.onerror = () => rej(r.error);
   });
 }
-const tx = async (s, mode, fn) => { const db = await open(); return new Promise((res, rej) => { const t = db.transaction(s, mode); const out = fn(t.objectStore(s)); t.oncomplete = () => res(out && out.result !== undefined ? out.result : out); t.onerror = () => rej(t.error); }); };
+const tx = async (s, mode, fn) => { const db = await open(); return new Promise((res, rej) => { const t = db.transaction(s, mode); const out = fn(t.objectStore(s)); t.oncomplete = () => res(out && 'result' in out ? out.result : out); t.onerror = () => rej(t.error); }); };
 export const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 export const all = s => tx(s, 'readonly', st => st.getAll());
 export const get = (s, id) => tx(s, 'readonly', st => st.get(id));
